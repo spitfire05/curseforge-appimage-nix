@@ -1,6 +1,6 @@
 # curseforge-appimage-nix
 
-Nix Flake for the (CurseForge app)[https://www.curseforge.com/download/app].
+Nix Flake for the [CurseForge app](https://www.curseforge.com/download/app).
 
 ## Usage
 
