@@ -15,8 +15,18 @@ nix run github:spitfire05/curseforge-appimage-nix
 
 ```nix
 {
-  inputs.curseforge.url = "github:spitfire05/curseforge-appimage-nix";
+  inputs = {
+    ...
 
+    curseforge.url = "github:spitfire05/curseforge-appimage-nix";
+
+    ...
+  }
+}
+```
+
+```nix
+{
   outputs = { nixpkgs, curseforge, ... }: {
     nixosConfigurations.host = nixpkgs.lib.nixosSystem {
       modules = [
@@ -34,6 +44,18 @@ Installs the package to `environment.systemPackages`, including the `.desktop` e
 
 ```nix
 {
+  inputs = {
+    ...
+
+    curseforge.url = "github:spitfire05/curseforge-appimage-nix";
+
+    ...
+  }
+}
+```
+
+```nix
+{
   imports = [ curseforge.nixosModules.default ];
 
   programs.curseforge.enable = true;
@@ -41,6 +63,18 @@ Installs the package to `environment.systemPackages`, including the `.desktop` e
 ```
 
 ### Home Manager module
+
+```nix
+{
+  inputs = {
+    ...
+
+    curseforge.url = "github:spitfire05/curseforge-appimage-nix";
+
+    ...
+  }
+}
+```
 
 ```nix
 {
