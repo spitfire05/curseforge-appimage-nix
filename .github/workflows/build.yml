@@ -6,6 +6,8 @@ on:
     - cron: '0 6 * * *'
   pull_request:
   push:
+    branches:
+      - 'main'
   workflow_dispatch: 
 jobs:
   build:
