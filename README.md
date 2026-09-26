@@ -4,26 +4,16 @@ Nix Flake for the [CurseForge app](https://www.curseforge.com/download/app).
 
 ## Usage
 
-### Direct package
+First, add this flake to your inputs:
 
 ```nix
-# nix build .#  or  nix run .
-nix run github:spitfire05/curseforge-appimage-nix
+curseforge = {
+  url = "github:spitfire05/curseforge-appimage-nix";
+  inputs.nixpkgs.follows = "nixpkgs";
+};
 ```
 
 ### Overlay
-
-```nix
-{
-  inputs = {
-    ...
-
-    curseforge.url = "github:spitfire05/curseforge-appimage-nix";
-
-    ...
-  }
-}
-```
 
 ```nix
 {
@@ -44,18 +34,6 @@ Installs the package to `environment.systemPackages`, including the `.desktop` e
 
 ```nix
 {
-  inputs = {
-    ...
-
-    curseforge.url = "github:spitfire05/curseforge-appimage-nix";
-
-    ...
-  }
-}
-```
-
-```nix
-{
   imports = [ curseforge.nixosModules.default ];
 
   programs.curseforge.enable = true;
@@ -63,18 +41,6 @@ Installs the package to `environment.systemPackages`, including the `.desktop` e
 ```
 
 ### Home Manager module
-
-```nix
-{
-  inputs = {
-    ...
-
-    curseforge.url = "github:spitfire05/curseforge-appimage-nix";
-
-    ...
-  }
-}
-```
 
 ```nix
 {
