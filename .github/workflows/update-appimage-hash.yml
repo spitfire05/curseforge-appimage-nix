@@ -1,0 +1,137 @@
+name: "Update AppImage hash"
+
+on:
+  # Keep the pinned sha256 in sync with the version-less upstream URL,
+  # otherwise `nix build` fails as soon as CurseForge ships a new AppImage.
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write # push the update branch
+  pull-requests: write # open the pull request
+
+concurrency:
+  group: update-appimage-hash
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v26
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Prefetch upstream hash
+        id: prefetch
+        run: |
+          set -euo pipefail
+
+          url="$(nix eval --raw .#appimage.url)"
+          json="$(nix store prefetch-file --name "$(basename "$url")" \
+            --hash-type sha256 --json "$url")"
+
+          store_path="$(echo "$json" | jq -r .storePath)"
+
+          # `sha256-<base64>` (SRI) -> nix base32, as used by `fetchurl`.
+          hash="$(nix hash convert --to nix32 "$(echo "$json" | jq -r .hash)")"
+          hash="${hash#sha256-}"
+
+          {
+            echo "url=$url"
+            echo "hash=$hash"
+            echo "store_path=$store_path"
+          } >>"$GITHUB_OUTPUT"
+
+          echo "Upstream: $url"
+          echo "sha256:   $hash"
+          echo "Store path: $store_path"
+
+      - name: Compare with pinned hash
+        id: compare
+        run: |
+          set -euo pipefail
+
+          current="$(nix eval --raw .#appimage.sha256)"
+          upstream="${{ steps.prefetch.outputs.hash }}"
+
+          if [ "$current" = "$upstream" ]; then
+            changed=false
+            echo "Upstream hash matches flake.nix, nothing to do."
+          else
+            changed=true
+            echo "flake.nix is out of date, updating the pin."
+          fi
+
+          {
+            echo "changed=$changed"
+            echo "old=$current"
+            echo "new=$upstream"
+          } >>"$GITHUB_OUTPUT"
+
+          {
+            echo "### AppImage hash"
+            echo
+            echo "| | sha256 |"
+            echo "| --- | --- |"
+            echo "| flake.nix | \`$current\` |"
+            echo "| upstream | \`$upstream\` |"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Update flake.nix
+        if: steps.compare.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+
+          old="${{ steps.compare.outputs.old }}"
+          new="${{ steps.compare.outputs.new }}"
+
+          if [ "$(grep -cF "$old" flake.nix)" -ne 1 ]; then
+            echo "::error::expected exactly one occurrence of the old hash in flake.nix"
+            exit 1
+          fi
+
+          sed -i "s/$old/$new/" flake.nix
+
+          # Guard against the pin silently not sticking (wrong attr path, ...).
+          patched="$(nix eval --raw .#appimage.sha256)"
+          if [ "$patched" != "$new" ]; then
+            echo "::error::flake.nix evaluates .#appimage.sha256 to $patched, expected $new"
+            exit 1
+          fi
+
+          git diff -- flake.nix
+
+      - name: Build with the new hash
+        if: steps.compare.outputs.changed == 'true'
+        run: nix build
+
+      - name: Open pull request
+        if: steps.compare.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: automation/update-appimage-hash
+          delete-branch: false # reused by the next daily run
+          add-paths: flake.nix
+          commit-message: 'chore(flake): update curseforge AppImage sha256'
+          title: 'chore: update curseforge AppImage sha256'
+          body: |
+            The upstream AppImage changed, so the pinned hash no longer matches.
+
+            - sha256: `${{ steps.compare.outputs.old }}` -> `${{ steps.compare.outputs.new }}`
+            - prefetched from `${{ steps.prefetch.outputs.url }}`
+            - store path: `${{ steps.prefetch.outputs.store_path }}`
+
+            `version` could not be detected automatically (the URL carries no version
+            and the AppImage payload is opaque), so please update it manually if it
+            changed upstream.
+
+            Opened by `.github/workflows/update-appimage-hash.yml`. Note that pull
+            requests created with the default `GITHUB_TOKEN` do not trigger the
+            `build.yml` CI run, so verify with `nix build` before merging if branch
+            protection requires it.

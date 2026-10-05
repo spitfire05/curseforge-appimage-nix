@@ -33,6 +33,8 @@
 
     pkgsFor = system: nixpkgs.legacyPackages.${system};
   in {
+    appimage = appimage;
+
     formatter = eachSystem (system: nixpkgs.legacyPackages.${system}.alejandra);
 
     packages = eachSystem (system: {

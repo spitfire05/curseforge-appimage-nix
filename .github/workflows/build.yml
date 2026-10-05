@@ -1,7 +1,8 @@
 name: "CI and smoke"
 
 on:
-  # Daily smoke build to find new version of curseforge app:
+  # Daily smoke build; new upstream AppImage versions are picked up by
+  # update-appimage-hash.yml, this just verifies the current pin still builds.
   schedule:
     - cron: '0 6 * * *'
   pull_request:
