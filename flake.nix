@@ -9,7 +9,7 @@
   }: let
     appimage = {
       pname = "curseforge";
-      version = "1.321.1-39714";
+      version = "1.322.0.40357";
       url = "https://curseforge.overwolf.com/downloads/curseforge-latest-linux.AppImage";
       sha256 = "0qbawqvggnqii60zixd657qn29nbbqy7j21c6ga0ymnjv1hxfhzh";
       desktopEntry = {
