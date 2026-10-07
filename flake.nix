@@ -7,15 +7,15 @@
     self,
     nixpkgs,
   }: let
-    appimage = {
+    appimage = rec {
       pname = "curseforge";
-      version = "1.322.0.40357";
+      version = "1.322.0.40357-flake.1";
       url = "https://curseforge.overwolf.com/downloads/curseforge-latest-linux.AppImage";
       sha256 = "0qbawqvggnqii60zixd657qn29nbbqy7j21c6ga0ymnjv1hxfhzh";
       desktopEntry = {
         name = "CurseForge";
         comment = "CurseForge desktop app";
-        icon = null;
+        icon = pname;
         categories = [
           "Network"
           "FileTransfer"
