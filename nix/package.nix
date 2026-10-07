@@ -19,6 +19,18 @@
     terminal = false;
     categories = desktopEntry.categories;
   };
+
+  icons =
+    pkgs.runCommand "${pname}-icons" {
+      nativeBuildInputs = with pkgs; [binutils squashfsTools];
+      src = appimageFile;
+      inherit pname;
+    } ''
+      offset=$(LC_ALL=C readelf -h "$src" | awk 'NR==13{e_shoff=$5} NR==18{e_shentsize=$5} NR==19{e_shnum=$5} END{print e_shoff+e_shentsize*e_shnum}')
+      mkdir -p "$out/share/icons"
+      unsquashfs -q -o "$offset" -d "$TMPDIR/sq" "$src" "usr/share/icons/hicolor/*/apps/$pname.png" || true
+      [ -d "$TMPDIR/sq/usr/share/icons/hicolor" ] && cp -r "$TMPDIR/sq/usr/share/icons/hicolor" "$out/share/icons/"
+    '';
 in
   pkgs.stdenv.mkDerivation {
     pname = appimage.pname;
@@ -37,8 +49,8 @@ in
 
         install -Dm755 ${appimageFile} "$out/share/${pname}/${pname}.AppImage"
 
-        # The AppImage is executed through `nixpkgs#appimage-run`, which
-        # handles extracting/mounting the archive at runtime.
+        cp -r ${icons}/share/icons "$out/share" 2>/dev/null || true
+
       # AppImage is executed through `nixpkgs#appimage-run`, which
       # handles extracting/mounting the archive at runtime.
       makeWrapper ${pkgs.appimage-run}/bin/appimage-run \
