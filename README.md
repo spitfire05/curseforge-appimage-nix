@@ -2,6 +2,8 @@
 
 Nix Flake for the [CurseForge app](https://www.curseforge.com/download/app).
 
+[![CI and smoke](https://github.com/spitfire05/curseforge-appimage-nix/actions/workflows/build.yml/badge.svg)](https://github.com/spitfire05/curseforge-appimage-nix/actions/workflows/build.yml)
+
 ## Usage
 
 First, add this flake to your inputs:
