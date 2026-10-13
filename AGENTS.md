@@ -8,8 +8,7 @@
 
 ## AppImage pinning & updates (key gotcha)
 - `flake.nix:13` URL is versionless; `sha256` at `flake.nix:14` pins the exact binary via `fetchurl`.
-- `.github/workflows/update-appimage-hash.yml` runs daily (and on dispatch) to prefetch, patch hash via sed, `nix build`, and open PR.
-- `version` (`flake.nix:12`) cannot be auto-detected; bump manually on upstream release.
+- `.github/workflows/update-appimage-hash.yml` runs daily (and on dispatch) to prefetch, patch hash & version via sed, `nix build`, and open PR.
 - PRs from update workflow use GITHUB_TOKEN → do not trigger `build.yml`; always `nix build` locally before merge if branch protection applies.
 - To manually update: replicate prefetch/compare/patch steps from the workflow (uses `nix eval --raw .#appimage.*`, `nix store prefetch-file`, `nix hash convert`).
 
