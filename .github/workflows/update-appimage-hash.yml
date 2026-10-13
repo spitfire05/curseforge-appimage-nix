@@ -82,6 +82,21 @@ jobs:
             echo "| upstream | \`$upstream\` |"
           } >>"$GITHUB_STEP_SUMMARY"
 
+      - name: Extract version
+        if: steps.compare.outputs.changed == 'true'
+        id: version
+        run: |
+          set -euo pipefail
+          store="${{ steps.prefetch.outputs.store_path }}"
+          log=/tmp/cf.log
+          timeout 15s bash -c '
+            app_run=$(nix build --no-link --print-out-paths nixpkgs#appimage-run)/bin/appimage-run
+            timeout 8s "$app_run" "$store" 2>&1 | tee '"$log"' || true
+          ' || true
+          ver=$(grep -o 'App version: [0-9.]*' "$log" | head -1 | sed 's/.*: //; s/\.$//')
+          [ -n "$ver" ] || { echo "::error::could not scrape version"; tail -10 "$log"; exit 1; }
+          echo "version=$ver" >>"$GITHUB_OUTPUT"
+
       - name: Update flake.nix
         if: steps.compare.outputs.changed == 'true'
         run: |
@@ -97,14 +112,27 @@ jobs:
 
           sed -i "s/$old/$new/" flake.nix
 
+          v="${{ steps.version.outputs.version }}"
+          if [ "$(grep -c 'version = "' flake.nix)" -ne 1 ]; then
+            echo "::error::expected exactly one version = \"...\" in flake.nix"
+            exit 1
+          fi
+          sed -i 's|version = "[^"]*"|version = "'"$v"'"|' flake.nix
+
           # Guard against the pin silently not sticking (wrong attr path, ...).
           patched="$(nix eval --raw .#appimage.sha256)"
           if [ "$patched" != "$new" ]; then
             echo "::error::flake.nix evaluates .#appimage.sha256 to $patched, expected $new"
             exit 1
           fi
+          patchedv="$(nix eval --raw .#appimage.version)"
+          if [ "$patchedv" != "$v" ]; then
+            echo "::error::flake.nix evaluates .#appimage.version to $patchedv, expected $v"
+            exit 1
+          fi
 
           git diff -- flake.nix
+
 
       - name: Build with the new hash
         if: steps.compare.outputs.changed == 'true'
@@ -118,18 +146,15 @@ jobs:
           branch: automation/update-appimage-hash
           delete-branch: false # reused by the next daily run
           add-paths: flake.nix
-          commit-message: 'chore(flake): update curseforge AppImage sha256'
-          title: 'chore: update curseforge AppImage sha256'
+          commit-message: 'chore(flake): update curseforge AppImage pin'
+          title: 'chore: update curseforge AppImage pin'
           body: |
             The upstream AppImage changed, so the pinned hash no longer matches.
 
             - sha256: `${{ steps.compare.outputs.old }}` -> `${{ steps.compare.outputs.new }}`
+            - version: `${{ steps.version.outputs.version }}` (scraped via nix run)
             - prefetched from `${{ steps.prefetch.outputs.url }}`
             - store path: `${{ steps.prefetch.outputs.store_path }}`
-
-            `version` could not be detected automatically (the URL carries no version
-            and the AppImage payload is opaque), so please update it manually if it
-            changed upstream.
 
             Opened by `.github/workflows/update-appimage-hash.yml`. Note that pull
             requests created with the default `GITHUB_TOKEN` do not trigger the

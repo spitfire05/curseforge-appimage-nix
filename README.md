@@ -62,7 +62,7 @@ Installs the package to `environment.systemPackages`, including the `.desktop` e
 
 The AppImage is downloaded at build time with `fetchurl` (content-addressed, so its hash pins the exact binary), then wrapped so that running the generated binary invokes `nixpkgs#appimage-run` on the downloaded file. A `makeDesktopItem` entry is installed into `share/applications` so your desktop environment picks it up via the XDG spec. Icons are extracted from the AppImage (using unsquashfs on the embedded SquashFS) and installed to `share/icons/hicolor` for proper desktop integration.
 
-Because the download URL carries no version, a new upstream release would break `fetchurl`'s hash check. The pinned `sha256` is therefore refreshed once a day by `.github/workflows/update-appimage-hash.yml`, which opens a pull request when it changes. The `version` in `flake.nix` is not machine-detectable and has to be bumped by hand.
+Because the download URL carries no version, a new upstream release would break `fetchurl`'s hash check. The pinned `sha256` is therefore refreshed once a day by `.github/workflows/update-appimage-hash.yml`, which opens a pull request when it changes. The workflow also scrapes the app's embedded `version` from startup logs (via the prefetched AppImage) and updates `flake.nix` automatically.
 
 ## Footnote
 
