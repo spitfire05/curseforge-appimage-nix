@@ -88,15 +88,15 @@ jobs:
         run: |
           set -euo pipefail
           store="${{ steps.prefetch.outputs.store_path }}"
-          nix shell nixpkgs#binutils nixpkgs#squashfsTools -c bash -c '
-            offset=$(LC_ALL=C readelf -h "'"$store"'" | awk '\''NR==13{e_shoff=$5} NR==18{e_shentsize=$5} NR==19{e_shnum=$5} END{print e_shoff+e_shentsize*e_shnum}'\'')
-            mkdir -p /tmp/sq
-            unsquashfs -q -o "$offset" -d /tmp/sq "'"$store"'" "curseforge.desktop" || true
-            ver=$(grep "^X-AppImage-Version=" /tmp/sq/curseforge.desktop | head -1 | cut -d= -f2)
-            rm -rf /tmp/sq
-            [ -n "$ver" ] || { echo "::error::could not extract X-AppImage-Version"; exit 1; }
-            echo "version=$ver" >>"$GITHUB_OUTPUT"
-          '
+          bin=$(nix build --no-link --print-out-paths nixpkgs#binutils.out | tail -1)/bin
+          sq=$(nix build --no-link --print-out-paths nixpkgs#squashfsTools | tail -1)/bin
+          offset=$(LC_ALL=C "$bin"/readelf -h "$store" | awk 'NR==13{e_shoff=$5} NR==18{e_shentsize=$5} NR==19{e_shnum=$5} END{print e_shoff+e_shentsize*e_shnum}')
+          mkdir -p /tmp/sq
+          "$sq"/unsquashfs -q -o "$offset" -d /tmp/sq "$store" "curseforge.desktop" || true
+          ver=$(grep "^X-AppImage-Version=" /tmp/sq/curseforge.desktop | head -1 | cut -d= -f2)
+          rm -rf /tmp/sq
+          [ -n "$ver" ] || { echo "::error::could not extract X-AppImage-Version"; exit 1; }
+          echo "version=$ver" >>"$GITHUB_OUTPUT"
 
       - name: Update flake.nix
         if: steps.compare.outputs.changed == 'true'
