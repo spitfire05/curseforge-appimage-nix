@@ -9,9 +9,9 @@
   }: let
     appimage = rec {
       pname = "curseforge";
-      version = "1.322.0.40357-flake.1";
+      version = "1.323.0-40840.40840";
       url = "https://curseforge.overwolf.com/downloads/curseforge-latest-linux.AppImage";
-      sha256 = "0qbawqvggnqii60zixd657qn29nbbqy7j21c6ga0ymnjv1hxfhzh";
+      sha256 = "1w70rbp3prmj5lrslkg5wy3x27yj6fhid0nc4iniv2zfa3svssl3";
       desktopEntry = {
         name = "CurseForge";
         comment = "CurseForge desktop app";
