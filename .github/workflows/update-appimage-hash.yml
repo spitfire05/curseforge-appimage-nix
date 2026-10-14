@@ -88,13 +88,14 @@ jobs:
         run: |
           set -euo pipefail
           store="${{ steps.prefetch.outputs.store_path }}"
-          log=/tmp/cf.log
-          timeout 15s bash -c '
-            app_run=$(nix build --no-link --print-out-paths nixpkgs#appimage-run)/bin/appimage-run
-            timeout 8s "$app_run" "$store" 2>&1 | tee '"$log"' || true
-          ' || true
-          ver=$(grep -o 'App version: [0-9.]*' "$log" | head -1 | sed 's/.*: //; s/\.$//')
-          [ -n "$ver" ] || { echo "::error::could not scrape version"; tail -10 "$log"; exit 1; }
+          bin=$(nix build --no-link --print-out-paths nixpkgs#binutils.out | tail -1)/bin
+          sq=$(nix build --no-link --print-out-paths nixpkgs#squashfsTools | tail -1)/bin
+          offset=$(LC_ALL=C "$bin"/readelf -h "$store" | awk 'NR==13{e_shoff=$5} NR==18{e_shentsize=$5} NR==19{e_shnum=$5} END{print e_shoff+e_shentsize*e_shnum}')
+          mkdir -p /tmp/sq
+          "$sq"/unsquashfs -q -o "$offset" -d /tmp/sq "$store" "curseforge.desktop" || true
+          ver=$(grep "^X-AppImage-Version=" /tmp/sq/curseforge.desktop | head -1 | cut -d= -f2)
+          rm -rf /tmp/sq
+          [ -n "$ver" ] || { echo "::error::could not extract X-AppImage-Version"; exit 1; }
           echo "version=$ver" >>"$GITHUB_OUTPUT"
 
       - name: Update flake.nix
@@ -152,7 +153,7 @@ jobs:
             The upstream AppImage changed, so the pinned hash no longer matches.
 
             - sha256: `${{ steps.compare.outputs.old }}` -> `${{ steps.compare.outputs.new }}`
-            - version: `${{ steps.version.outputs.version }}` (scraped via nix run)
+            - version: `${{ steps.version.outputs.version }}` (from X-AppImage-Version)
             - prefetched from `${{ steps.prefetch.outputs.url }}`
             - store path: `${{ steps.prefetch.outputs.store_path }}`
 
