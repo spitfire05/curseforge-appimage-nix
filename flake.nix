@@ -1,5 +1,5 @@
 {
-  description = "Run a third-party AppImage on NixOS via appimage-run";
+  description = "CurseForge AppImage";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
