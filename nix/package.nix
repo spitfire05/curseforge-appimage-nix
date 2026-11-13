@@ -63,4 +63,8 @@ in
 
         runHook postInstall
     '';
+
+    meta = {
+      license = pkgs.lib.licenses.unfree;
+    };
   }

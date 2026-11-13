@@ -137,7 +137,9 @@ jobs:
 
       - name: Build with the new hash
         if: steps.compare.outputs.changed == 'true'
-        run: nix build
+        env:
+          NIXPKGS_ALLOW_UNFREE: 1
+        run: nix build --impure
 
       - name: Open pull request
         if: steps.compare.outputs.changed == 'true'
